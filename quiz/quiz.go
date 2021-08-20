@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -19,8 +21,9 @@ type quiz struct{
 }
 
 func main() {
-	var fileFlag = flag.String("csv", "problems.csv", "File name for the quiz csv")
+	var fileFlag = flag.String("csv", "problems.csv", "File name for the quiz csv.")
 	var timeFlag = flag.Int("limit", 30, "Time limit in seconds for quiz. Defaults to 30secs.")
+	var shuffleFlag = flag.Bool("shuffle", false, "Set to true to shuffle the question order.")
 	flag.Parse()
 
 	quiz := quiz{
@@ -28,24 +31,27 @@ func main() {
 		correct: 0,
 		total: 0,
 		limit: *timeFlag,
-
 	}
 
-	f, err := os.Open(file)
+	f, err := os.Open(quiz.file)
 	if err != nil {
-		log.Fatal("Unable to read input file: " + file, err)
+		log.Fatal("Unable to read input file: " + quiz.file, "\n", err)
 	}
 	defer f.Close()
 
 	csvReader := csv.NewReader(f)
-    lines, err := csvReader.ReadAll()
+    quizLines, err := csvReader.ReadAll()
     if err != nil {
-        log.Fatal("Unable to parse file as CSV: " + file, err)
+        log.Fatal("Unable to parse file as CSV: " + quiz.file, err)
     }
-	quiz.total = len(lines)
+	quiz.total = len(quizLines)
+
+	if *shuffleFlag {
+		quizLines = shuffle(quizLines)
+	}
 
 	c := make(chan int)
-	go questions(lines, &quiz, c)
+	go questions(quizLines, &quiz, c)
 
 	// Wait for signal to start timer
 	startFlag := <-c
@@ -67,6 +73,14 @@ func timer(quiz *quiz, c chan int){
 	close(c)
 }
 
+func shuffle(questions [][]string) [][]string {
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(questions), func(i, j int) {
+		questions[i], questions[j] = questions[j], questions[i]
+	})
+	return questions
+}
+
 func questions(lines [][]string, quiz *quiz, c chan int) {
 	// Send signal through channel to start quiz
 	var temp []byte
@@ -76,17 +90,21 @@ func questions(lines [][]string, quiz *quiz, c chan int) {
 
 	// Iterate through each question and take answers htrough std input
 	for i , line := range lines {
-		fmt.Printf("Problem #%v: %s = ", i+1, line[0])
+		question, expectedAns := line[0], line[1]
 
-		var ans []byte 
-		_, err := fmt.Scanln(&ans)
+		expectedAns = strings.ToLower(strings.TrimSpace(expectedAns))
+
+		fmt.Printf("Problem #%v: %s = ", i+1, question)
+
+		var userAns []byte 
+		_, err := fmt.Scanln(&userAns)
 
 		if err != nil {
 			fmt.Println("Incorrect input: ", err)
 			continue
 		}
 		
-		if string(ans) == line[1]{
+		if strings.ToLower(string(userAns)) == expectedAns{
 			quiz.correct += 1
 		} 
 	}
