@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gophercises/urlshort"
+	"github.com/smelton01/go-basics/urlshort"
 )
 
 func main() {
+	yamlFlag := flag()
 	mux := defaultMux()
 
 	// Build the MapHandler using the mux as the fallback
