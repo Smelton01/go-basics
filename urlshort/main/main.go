@@ -1,21 +1,36 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/smelton01/go-basics/urlshort"
 )
 
-func main() {
-	// var yamlFile = flag.String("-yaml", "paths.yml", "Path to yaml file with url shortcuts")
-	var filePath = flag.String("-file", "paths.json", "Path to file with url shortcuts")
+const dbPath = "urlshort.db"
 
+func main() {
+	var filePath = flag.String("file", "paths.json", "Path to file with URL shortcuts")
+	var initFlag = flag.Bool("newdb", false, "Set true to initialize  anew database in local storage")
 	flag.Parse()
+
+	var db *sql.DB
+	if *initFlag {
+		db = initDB(dbPath)
+	}else{
+		var err error
+		db, err = sql.Open("sqlite3", "./urlshort.db")
+		if err != nil {
+			log.Fatal("Database read error: ", err)
+		}
+	}
 
 	mux := defaultMux()
 
@@ -25,29 +40,23 @@ func main() {
 		log.Fatal("File error: ", err)
 	}
 
+	defaultHandler := urlshort.DBHandler(db, mux)
+
 	if ext := filepath.Ext(*filePath); ext == ".yaml" {
-		handler, err = urlshort.YAMLHandler(file, mux)
+		handler, err = urlshort.YAMLHandler(file, defaultHandler)
 
 		if err != nil {
 			log.Fatal("Handler Error", err)
 		}
 	} else if ext == ".json" {
-		handler, err = urlshort.JSONHandler(file, mux)
+		handler, err = urlshort.JSONHandler(file, defaultHandler)
 		if err != nil {
 			log.Fatal("Handler Error", err)
 		}
 	}else {
-		// TO DO: make db default
 		handler = mux
+		// fmt.Println(db)
 	}
-	
-	// // Build the MapHandler using the mux as the fallback
-	// pathsToUrls := map[string]string{
-	// 	"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
-	// 	"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
-	// }
-	// mapHandler := urlshort.MapHandler(pathsToUrls, mux)
-
 	
 	fmt.Println("Starting the server on :8080")
 	http.ListenAndServe(":8080", handler)
@@ -61,4 +70,36 @@ func defaultMux() *http.ServeMux {
 
 func hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, world!")
+}
+
+func initDB(path  string) *sql.DB {
+
+	err := os.Remove(path)
+	if err != nil {
+		log.Println("Database not found.")
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	
+	db, err := sql.Open("sqlite3", path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	createURLShortTable := `CREATE TABLE urlshort (
+		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+		"path" TEXT,
+		"url" TEXT 
+	);`
+
+	stmt, err := db.Prepare(createURLShortTable)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt.Exec()
+	log.Println("URL Shorterner database created.")
+	return db
 }

@@ -1,8 +1,10 @@
 package urlshort
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -25,6 +27,41 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 			fallback.ServeHTTP(res, req)
 		}
 	})
+}
+
+// DBHandler will query the database for provided path
+// and redirect the user to the URL corresponding to the shortcut
+// If the path is not found in the database, then the
+// fallback http.Handler will be called instead.
+func DBHandler(db *sql.DB, fallback  http.Handler) http.HandlerFunc {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request)  {
+		path := req.URL.Path
+		mapDB := dbQuery(db, path)
+		if p := mapDB[path]; p != "" {
+			http.Redirect(res, req, p, http.StatusTemporaryRedirect)
+		}else{
+			fallback.ServeHTTP(res, req)
+		}
+	})
+}
+
+
+func dbQuery(db *sql.DB, path string) map[string]string {
+	rows, err := db.Query("SELECT * FROM urlshort where path=?", path)
+	if err != nil {
+		log.Fatal("Database read error: ", err)
+	}
+	defer rows.Close()
+
+	out := make(map[string]string)
+	for rows.Next() {
+		var path, url string 
+		if err := rows.Scan(&path, &url); err != nil {
+			log.Fatal(err)
+		}
+		out[path] = url
+	}
+	return out
 }
 
 // YAMLHandler will parse the provided YAML and then return
