@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,6 +14,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/smelton01/go-basics/urlshort"
 )
+
+type URLShort struct{
+	Path string
+	URL string
+}
+
+type dbObject struct{
+	DB *sql.DB
+}
+
+var Database dbObject
 
 const dbPath = "urlshort.db"
 
@@ -32,7 +44,8 @@ func main() {
 		}
 	}
 
-	mux := defaultMux()
+	Database.DB = db
+	index := defaultMux()
 
 	var handler http.Handler
 	file, err := ioutil.ReadFile(*filePath)
@@ -40,7 +53,7 @@ func main() {
 		log.Fatal("File error: ", err)
 	}
 
-	defaultHandler := urlshort.DBHandler(db, mux)
+	defaultHandler := urlshort.DBHandler(db, index)
 
 	if ext := filepath.Ext(*filePath); ext == ".yaml" {
 		handler, err = urlshort.YAMLHandler(file, defaultHandler)
@@ -54,8 +67,7 @@ func main() {
 			log.Fatal("Handler Error", err)
 		}
 	}else {
-		handler = mux
-		// fmt.Println(db)
+		handler = index
 	}
 	
 	fmt.Println("Starting the server on :8080")
@@ -64,12 +76,46 @@ func main() {
 
 func defaultMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", hello)
+	mux.HandleFunc("/", Database.hello)
 	return mux
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello, world!")
+func (db *dbObject) hello(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("./templates/layout.html"))
+
+    if r.Method != http.MethodPost {
+        tmpl.Execute(w, nil)
+        return
+    }
+    details := URLShort{
+        Path:   r.FormValue("path"),
+        URL: r.FormValue("url"),
+    }
+    // do something with details
+    
+	err := db.addURL(details.Path, details.URL)
+	if err != nil {
+		log.Fatal("Insert Error: ", err)
+	}
+
+    tmpl.Execute(w, struct{ 
+		Success bool;
+		URL string
+		}{true, fmt.Sprintf("{ /%v : => :%v }", details.Path,details.URL)})
+	fmt.Fprintln(w, "Hello, world!", details.Path)
+}
+
+func (db *dbObject) addURL(path, url string) error {
+	insertURL := `INSERT INTO urlshort(path, url) values(?, ?)`
+	stmt, err := db.DB.Prepare(insertURL)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec("/"+path, url)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func initDB(path  string) *sql.DB {

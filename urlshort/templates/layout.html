@@ -1,0 +1,14 @@
+<!-- forms.html -->
+{{if .Success}}
+<h1>New URL Shortened!</h1>
+<h3>{{.URL}}</h3>
+{{else}}
+<h1>URL Shortener</h1>
+<form method="POST">
+  <label>Path:</label><br />
+  <input type="text" name="path" /><br />
+  <label>URL:</label><br />
+  <input type="text" name="url" /><br />
+  <input type="submit" />
+</form>
+{{end}}

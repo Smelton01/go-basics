@@ -56,7 +56,8 @@ func dbQuery(db *sql.DB, path string) map[string]string {
 	out := make(map[string]string)
 	for rows.Next() {
 		var path, url string 
-		if err := rows.Scan(&path, &url); err != nil {
+		var id int
+		if err := rows.Scan(&id, &path, &url); err != nil {
 			log.Fatal(err)
 		}
 		out[path] = url
