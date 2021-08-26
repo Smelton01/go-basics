@@ -6,5 +6,9 @@
   {
     "path": "/urlshort-final",
     "url": "https://github.com/gophercises/urlshort/tree/solution"
+  },
+  {
+    "path": "/ex",
+    "url": "https://github.com/Smelton01/go-basics/blob/master/quiz/quiz.go"
   }
 ]

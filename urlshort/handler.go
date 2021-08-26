@@ -1,6 +1,7 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -8,8 +9,8 @@ import (
 )
 
 type path2URL struct {
-	Path string `yaml:"path"`
-	Url  string	`yaml:"url"`
+	Path string `yaml:"path" json:"path"`
+	Url  string	`yaml:"url" json:"url"`
 }
 
 // MapHandler will return an http.HandlerFunc that will attempt to map any
@@ -56,4 +57,22 @@ func buildMap(yml []path2URL) map[string]string {
 		ymlMap[val.Path] = val.Url
 	}
 	return ymlMap
+}
+
+func JSONHandler(json []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	parsedJSON, err := parseJSON(json)
+	if err != nil {
+		return nil, err
+	}
+	jsonMap := buildMap(parsedJSON) 
+	return MapHandler(jsonMap, fallback), nil
+}
+
+func parseJSON(js []byte) ([]path2URL, error) {
+	var parsedJSON []path2URL
+	err := json.Unmarshal(js, &parsedJSON)
+	if err != nil {
+		return nil, err
+	}
+	return parsedJSON, nil
 }
