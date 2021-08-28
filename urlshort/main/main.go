@@ -29,7 +29,7 @@ var Database dbObject
 const dbPath = "urlshort.db"
 
 func main() {
-	var filePath = flag.String("file", "paths.json", "Path to file with URL shortcuts")
+	var filePath = flag.String("file", "./paths.json", "Path to file with URL shortcuts")
 	var initFlag = flag.Bool("newdb", false, "Set true to initialize  anew database in local storage")
 	flag.Parse()
 
@@ -45,15 +45,16 @@ func main() {
 	}
 
 	Database.DB = db
-	index := defaultMux()
+	mux := defaultMux()
 
 	var handler http.Handler
 	file, err := ioutil.ReadFile(*filePath)
 	if err != nil {
-		log.Fatal("File error: ", err)
+		log.Println("File error: ", err)
+		file = []byte(`[{"path":"test", "url":"www.example.com"}]`)
 	}
 
-	defaultHandler := urlshort.DBHandler(db, index)
+	defaultHandler := urlshort.DBHandler(db, mux)
 
 	if ext := filepath.Ext(*filePath); ext == ".yaml" {
 		handler, err = urlshort.YAMLHandler(file, defaultHandler)
@@ -67,7 +68,7 @@ func main() {
 			log.Fatal("Handler Error", err)
 		}
 	}else {
-		handler = index
+		handler = mux
 	}
 	
 	fmt.Println("Starting the server on :8080")
@@ -76,11 +77,11 @@ func main() {
 
 func defaultMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", Database.hello)
+	mux.HandleFunc("/", Database.index)
 	return mux
 }
 
-func (db *dbObject) hello(w http.ResponseWriter, r *http.Request) {
+func (db *dbObject) index(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("./templates/layout.html"))
 
     if r.Method != http.MethodPost {
@@ -91,7 +92,6 @@ func (db *dbObject) hello(w http.ResponseWriter, r *http.Request) {
         Path:   r.FormValue("path"),
         URL: r.FormValue("url"),
     }
-    // do something with details
     
 	err := db.addURL(details.Path, details.URL)
 	if err != nil {
@@ -126,7 +126,7 @@ func initDB(path  string) *sql.DB {
 	}
 	file, err := os.Create(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("File create: ",err)
 	}
 	defer file.Close()
 	

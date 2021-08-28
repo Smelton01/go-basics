@@ -1,0 +1,34 @@
+##
+## Build
+##
+
+FROM golang:1.16-buster AS build
+
+WORKDIR /app
+
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
+
+COPY *.go ./
+COPY main ./main
+ADD templates/layout.html /app/templates
+COPY *.json /app/
+
+RUN go build -o /urlshort ./main/main.go
+
+##
+## Deploy
+##
+
+FROM gcr.io/distroless/base-debian10
+
+WORKDIR /
+
+COPY --from=build /urlshort /urlshort
+
+EXPOSE 8080
+
+USER root
+
+ENTRYPOINT ["/urlshort", "--newdb", "true"]
