@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/smelton01/go-basics/urlshort"
@@ -18,6 +20,7 @@ import (
 type URLShort struct{
 	Path string
 	URL string
+	Timeout string
 }
 
 type dbObject struct{
@@ -31,6 +34,7 @@ const dbPath = "urlshort.db"
 func main() {
 	var filePath = flag.String("file", "./paths.json", "Path to file with URL shortcuts")
 	var initFlag = flag.Bool("newdb", false, "Set true to initialize  anew database in local storage")
+	// var timeout = flag.Int("time", 24, "Timeout in hours of created URL shortcut")
 	flag.Parse()
 
 	var db *sql.DB
@@ -51,7 +55,7 @@ func main() {
 	file, err := ioutil.ReadFile(*filePath)
 	if err != nil {
 		log.Println("File error: ", err)
-		file = []byte(`[{"path":"test", "url":"www.example.com"}]`)
+		file = []byte(`[{"path":"/test", "url":"www.example.com"}]`)
 	}
 
 	defaultHandler := urlshort.DBHandler(db, mux)
@@ -92,8 +96,13 @@ func (db *dbObject) index(w http.ResponseWriter, r *http.Request) {
         Path:   r.FormValue("path"),
         URL: r.FormValue("url"),
     }
-    
-	err := db.addURL(details.Path, details.URL)
+    timeout, err :=  strconv.Atoi(r.FormValue("timeout"))
+	if err != nil {
+		log.Fatal("Invalid timeout")
+	}
+	exp := time.Now().Add(time.Duration(timeout)*time.Hour).Format(time.RFC3339)
+
+	err = db.addURL(details.Path, details.URL, exp)
 	if err != nil {
 		log.Fatal("Insert Error: ", err)
 	}
@@ -105,13 +114,13 @@ func (db *dbObject) index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, world!", details.Path)
 }
 
-func (db *dbObject) addURL(path, url string) error {
-	insertURL := `INSERT INTO urlshort(path, url) values(?, ?)`
+func (db *dbObject) addURL(path, url string, timeout string) error {
+	insertURL := `INSERT INTO urlshort(path, url, timeout) values(?, ?, ?)`
 	stmt, err := db.DB.Prepare(insertURL)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec("/"+path, url)
+	_, err = stmt.Exec("/"+path, url, timeout)
 	if err != nil {
 		return err
 	}
@@ -138,7 +147,8 @@ func initDB(path  string) *sql.DB {
 	createURLShortTable := `CREATE TABLE urlshort (
 		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 		"path" TEXT,
-		"url" TEXT 
+		"url" TEXT,
+		"timeout" STRING 
 	);`
 
 	stmt, err := db.Prepare(createURLShortTable)

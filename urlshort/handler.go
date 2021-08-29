@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -57,8 +58,17 @@ func dbQuery(db *sql.DB, path string) map[string]string {
 	for rows.Next() {
 		var path, url string 
 		var id int
-		if err := rows.Scan(&id, &path, &url); err != nil {
+		var timeout string
+		if err := rows.Scan(&id, &path, &url, &timeout); err != nil {
 			log.Fatal(err)
+		}
+		exp, err := time.Parse(time.RFC3339, timeout)
+		if err != nil {
+			log.Fatal("Time error", err)
+		}
+		if time.Until(exp) < time.Duration(0) {
+			fmt.Println("Expired", time.Until(exp))
+			return out
 		}
 		out[path] = url
 	}
