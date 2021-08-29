@@ -75,6 +75,14 @@ func main() {
 		handler = mux
 	}
 	
+	go func () {
+		for {
+			Database.cleanup()
+			time.Sleep(time.Duration(10)*time.Minute)
+		}
+	}()
+		
+
 	fmt.Println("Starting the server on :8080")
 	http.ListenAndServe(":8080", handler)
 }
@@ -100,7 +108,7 @@ func (db *dbObject) index(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal("Invalid timeout")
 	}
-	exp := time.Now().Add(time.Duration(timeout)*time.Hour).Format(time.RFC3339)
+	exp := time.Now().Add(time.Duration(timeout)*time.Minute).Format(time.RFC3339)
 
 	err = db.addURL(details.Path, details.URL, exp)
 	if err != nil {
@@ -111,7 +119,13 @@ func (db *dbObject) index(w http.ResponseWriter, r *http.Request) {
 		Success bool;
 		URL string
 		}{true, fmt.Sprintf("{ /%v : => :%v }", details.Path,details.URL)})
-	fmt.Fprintln(w, "Hello, world!", details.Path)
+	fmt.Fprintln(w, "Expires at :", func() string {
+		str, err := time.Parse(time.RFC3339, exp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return str.Format(time.RFC1123)
+	}())
 }
 
 func (db *dbObject) addURL(path, url string, timeout string) error {
@@ -158,4 +172,39 @@ func initDB(path  string) *sql.DB {
 	stmt.Exec()
 	log.Println("URL Shorterner database created.")
 	return db
+}
+
+func (db *dbObject) cleanup() {
+	expiredURLs := `SELECT * FROM urlshort where timeout < ?`
+
+	rows, err := db.DB.Query(expiredURLs, time.Now().Format(time.RFC3339))
+	if err != nil {
+		log.Println("Clean error", err)
+	}
+	defer rows.Close()
+	var trash []struct{
+		path string
+	}
+	var id int
+	var path, url, timeout string
+	for rows.Next() {
+		err := rows.Scan(&id, &path, &url, &timeout)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		trash = append(trash, struct{path string}{path})
+	}
+	rows.Close()
+
+	for item := range trash {
+		deleteEntry := `DELETE from urlshort where path=?`
+		_ , err = db.DB.Exec(deleteEntry, item)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println(path, "URL deleted successfully")
+	}
+	
 }
