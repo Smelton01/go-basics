@@ -20,7 +20,13 @@ func main(){
 	file := flag.String("file", "ex1.html", "Path to html file to parse.")
 	flag.Parse()
 
-	data, err := ioutil.ReadFile(*file)
+	output := LinkFunc(*file)
+	fmt.Println(output)
+
+}
+
+func LinkFunc(file string) []Link{
+	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -33,8 +39,7 @@ func main(){
 	links := []Link{}
 
 	dfs(doc, &links)
-	fmt.Println(links)
-
+	return links
 }
 
 func dfs (n *html.Node, links *[]Link) {
