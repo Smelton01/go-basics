@@ -1,11 +1,11 @@
-package main
+package link
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -13,16 +13,6 @@ import (
 type Link struct{
 	Href string
 	Text string
-}
-
-
-func main(){
-	file := flag.String("file", "ex1.html", "Path to html file to parse.")
-	flag.Parse()
-
-	output := LinkFunc(*file)
-	fmt.Println(output)
-
 }
 
 func LinkFunc(file string) []Link{
@@ -47,8 +37,8 @@ func dfs (n *html.Node, links *[]Link) {
 		for _, a := range n.Attr {
 			if a.Key == "href" {
 				current := Link{
-					Href: a.Val,
-					Text: n.FirstChild.Data,
+					Href: strings.TrimSpace(a.Val),
+					Text: strings.TrimSpace(n.FirstChild.Data),
 				}
 				*links = append(*links, current)
 				break
