@@ -1,6 +1,8 @@
 package link_test
 
 import (
+	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/smelton01/go-basics/link"
@@ -47,7 +49,14 @@ func Test(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			got := link.LinkFunc(tC.file); 
+
+			got := link.LinkFunc(func () []byte {
+				html, err := ioutil.ReadFile(tC.file)
+				if err != nil {
+					fmt.Println(err)
+				}
+				return html
+			}()); 
 			if len(got) != len(tC.expect) {
 				t.Errorf("Link func got: %v\n expected %v", got, tC.expect)
 			}
