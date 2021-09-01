@@ -175,13 +175,15 @@ func initDB(path  string) *sql.DB {
 }
 
 func (db *dbObject) cleanup() {
+	// Dele all the url shortcuts that have expired from the database
+
 	expiredURLs := `SELECT * FROM urlshort where timeout < ?`
 
 	rows, err := db.DB.Query(expiredURLs, time.Now().Format(time.RFC3339))
 	if err != nil {
 		log.Println("Clean error", err)
 	}
-	defer rows.Close()
+	
 	var trash []struct{
 		path string
 	}

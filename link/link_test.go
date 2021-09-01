@@ -17,31 +17,31 @@ func Test(t *testing.T) {
 	}{
 		{
 			desc: "ex1",
-			file: "ex1.html",
+			file: "examples/ex1.html",
 			expect: []link.Link{{Href: "/other-page", Text: "A link to another page"}},
 			
 		},
 		{
 			desc: "ex2",
-			file: "ex2.html",
-			expect: []link.Link{{Href: "https://www.twitter.com/joncalhoun", Text: "Check me out on twitter"}, {Href: "https://github.com/gophercises", Text: "Gophercises is on Github!"}},
+			file: "examples/ex2.html",
+			expect: []link.Link{{Href: "https://www.twitter.com/joncalhoun", Text: "Check me out on twitter"}, {Href: "https://github.com/gophercises", Text: "Gophercises is on Github !"}},
 			
 		},
 		{
 			desc: "ex3",
-			file: "ex3.html",
+			file: "examples/ex3.html",
 			expect: []link.Link{{Href: "#", Text: "Login"}, {Href: "/lost", Text: "Lost? Need help?"}, {Href: "https://twitter.com/marcusolsson", Text: "@marcusolsson"}},
 			
 		},
 		{
 			desc: "ex4",
-			file: "ex4.html",
+			file: "examples/ex4.html",
 			expect: []link.Link{{Href: "/dog-cat", Text: "dog cat"}},
 			
 		},
 		{
 			desc: "ex6",
-			file: "ex6.html",
+			file: "examples/ex6.html",
 			expect: []link.Link{{Href: "https://www.fukuoka-now.com/en/classified/archive/", Text: "Fukuoka Now"}, {Href: "https://github.com/Smelton01/Site-tracker", Text: "here"}},
 			
 		},

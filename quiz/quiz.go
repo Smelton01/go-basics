@@ -21,8 +21,8 @@ type quiz struct{
 }
 
 func main() {
-	var fileFlag = flag.String("csv", "problems.csv", "File name for the quiz csv.")
-	var timeFlag = flag.Int("limit", 30, "Time limit in seconds for quiz. Defaults to 30secs.")
+	var fileFlag = flag.String("csv", "problems.csv", "File path for the quiz csv in the form, 'question, answer'.")
+	var timeFlag = flag.Int("limit", 30, "Time limit in seconds for quiz. Default: 30secs.")
 	var shuffleFlag = flag.Bool("shuffle", false, "Set to true to shuffle the question order.")
 	flag.Parse()
 
