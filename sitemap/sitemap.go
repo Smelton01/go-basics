@@ -8,23 +8,21 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/smelton01/go-basics/link"
 )
-const queueSize = 100
 
-type node struct {
+type Node struct {
 	url string
 	level int
-	children []node
+	children []Node
 }
 
 type Map struct {
 	rootURL string
 	visitedURL map[string]bool
-	toVisit chan *node
-	siteMapRoot node
+	toVisit  []*Node
+	siteMapRoot Node
 
 }
 
@@ -36,34 +34,42 @@ func SiteMap(rootURL string){
 	sitemap := Map{
 		rootURL: u.Hostname(),
 		visitedURL: make(map[string]bool),
-		toVisit: make(chan *node, queueSize),
-		siteMapRoot: node{
+		toVisit: []*Node{},
+		siteMapRoot: Node{
 			url: rootURL,
 			level: 0,
-			children: []node{},
+			children: []Node{},
 		},
 	}
 
-	sitemap.toVisit <- &sitemap.siteMapRoot
+	sitemap.push(&sitemap.siteMapRoot)
 
-	go sitemap.timer()
-
-	for nextNode := range sitemap.toVisit {
-		// nextNode := <-sitemap.toVisit
-		fmt.Println(nextNode.url)
+	// var nextNode *node
+	for {
+		nextNode := sitemap.pop()
+		if nextNode == nil {
+			break
+		}
 		children, err := sitemap.getChildren(nextNode.url)
 		CheckError(err)
 
 		sitemap.addChildren(nextNode, children)
 	}
 
-	fmt.Println(sitemap)
+	fmt.Println(sitemap.siteMapRoot)
 }
 
-func (m *Map) timer(){
-	time.Sleep(time.Duration(15)*time.Second)
-	fmt.Println("Times up!!!!")
-	close(m.toVisit)
+func (m *Map) push(currNode *Node) {
+	m.toVisit = append(m.toVisit, currNode)
+}
+
+func (m *Map) pop() *Node {
+	if len(m.toVisit) == 0 {
+		return nil
+	}
+	head := m.toVisit[0]
+	m.toVisit = m.toVisit[1:]
+	return head
 }
 
 func (m *Map) getChildren(parentURL string) ([]string, error) {
@@ -85,7 +91,7 @@ func (m *Map) getChildren(parentURL string) ([]string, error) {
 	return childrenURL, nil
 }
 
-func (m *Map) addChildren(currNode *node, children []string){
+func (m *Map) addChildren(currNode *Node, children []string){
 	// Add all valid children of node note yet visited to the node and add the node to toVisit list
 	if len(children) == 0 {
 		return
@@ -103,20 +109,20 @@ func (m *Map) addChildren(currNode *node, children []string){
 			continue
 		}
 
-		currNode.children = append(currNode.children, node{
+		currNode.children = append(currNode.children, Node{
 			url: fullURL,
 			level: currNode.level + 1,
-			children: []node{},
+			children: []Node{},
 		})
 		// mark URL as viisted
 		m.visitedURL[child] = true
 		
-		if currNode.level > 3 {
+		if currNode.level > 1 {
 			log.Println("Max depth reached")
 			return
 		}
-		// add chiled node to visit queue
-		m.toVisit <- &currNode.children[len(currNode.children)-1]
+		// add tail child node to visit queue
+		m.push(&currNode.children[len(currNode.children)-1])
 	}
 	
 }
