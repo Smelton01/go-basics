@@ -1,7 +1,9 @@
 package link_test
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"testing"
 
@@ -24,7 +26,7 @@ func Test(t *testing.T) {
 		{
 			desc: "ex2",
 			file: "examples/ex2.html",
-			expect: []link.Link{{Href: "https://www.twitter.com/joncalhoun", Text: "Check me out on twitter"}, {Href: "https://github.com/gophercises", Text: "Gophercises is on Github !"}},
+			expect: []link.Link{{Href: "https://www.twitter.com/joncalhoun", Text: "Check me out on twitter"}, {Href: "https://github.com/gophercises", Text: "Gophercises is on Github!"}},
 			
 		},
 		{
@@ -50,12 +52,12 @@ func Test(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 
-			got := link.LinkFunc(func () []byte {
+			got := link.Parse(func () io.Reader {
 				html, err := ioutil.ReadFile(tC.file)
 				if err != nil {
 					fmt.Println(err)
 				}
-				return html
+				return bytes.NewReader(html)
 			}()); 
 			if len(got) != len(tC.expect) {
 				t.Errorf("Link func got: %v\n expected %v", got, tC.expect)

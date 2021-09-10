@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -9,9 +10,6 @@ import (
 
 	"github.com/smelton01/go-basics/link"
 )
-
-
-
 
 func main(){
 	file := flag.String("file", "", "Path to html file to parse.")
@@ -40,7 +38,9 @@ func main(){
 		log.Fatal("Please provide url (-url) or file (-file) to parse.")
 	}
 
-	output := link.LinkFunc(html)
+	r := bytes.NewReader(html)
+
+	output := link.Parse(r)
 	fmt.Println(output)
 
 }
