@@ -46,7 +46,6 @@ func DBHandler(db *sql.DB, fallback  http.Handler) http.HandlerFunc {
 	})
 }
 
-
 func dbQuery(db *sql.DB, path string) map[string]string {
 	rows, err := db.Query("SELECT * FROM urlshort where path=?", path)
 	if err != nil {

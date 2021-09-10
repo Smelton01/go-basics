@@ -1,6 +1,7 @@
 package sitemap
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -81,7 +82,9 @@ func (m *Map) getChildren(parentURL string) ([]string, error) {
 	html, err := ioutil.ReadAll(resp.Body)
 	CheckError(err)
 
-	children := link.LinkFunc(html)
+	r := bytes.NewReader(html)
+
+	children := link.Parse(r)
 	childrenURL := []string{}
 
 	for _, pair := range children {
@@ -137,7 +140,7 @@ func (m Map) checkURL(URL string) (string, error) {
 	}(m.rootURL)) {
 		return URL, nil
 	}
-	if URL[0] == '/' {
+	if len(URL) >0 && URL[0] == '/' {
 		return "https://" + m.rootURL + URL, nil
 	}
 
