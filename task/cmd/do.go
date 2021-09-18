@@ -17,35 +17,48 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
+	bolt "go.etcd.io/bbolt"
 )
 
 // doCmd represents the do command
 var doCmd = &cobra.Command{
-	Use:   "do",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Use:   "do [task number]",
+	Short: "Mark a task on your TODO list as complete",
+	RunE: myConn.do,
+}
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("do called")
-	},
+func (c *Conn) do(cmd *cobra.Command, args []string) error{
+	// mark task as done
+	if len(args) != 1 {
+		return fmt.Errorf("too many arguments")
+	}
+
+	if _, e := strconv.ParseInt(args[0], 10, 32); e != nil {
+		return fmt.Errorf("task index must be number")
+	}
+
+	return c.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("todos"))
+		c := b.Cursor()
+
+		index := 1
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			// Update task to done if index matches
+			if strconv.Itoa(index) == args[0]{
+				fmt.Printf("Task \"%v\" marked as done", k)
+				val := strings.Split(string(v), separator)
+				val[0] = "true"
+				return b.Put(k, []byte(strings.Join(val, separator)))}
+			index++
+		}
+		return fmt.Errorf("invalid task index")
+	})
 }
 
 func init() {
 	rootCmd.AddCommand(doCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// doCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// doCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

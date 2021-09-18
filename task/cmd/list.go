@@ -17,32 +17,40 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+	bolt "go.etcd.io/bbolt"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all your saved tasks",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("You have the following tasks:")
-		for _, t := range Todos {
-			fmt.Printf("%v. %s\n", t.index, t.details)
-		}
-	},
+	Short: "List all your incomplete tasks",
+	RunE: myConn.list,
 }
+
+func (c *Conn) list(cmd *cobra.Command, args []string) error {
+	
+	return c.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("todos"))
+		c := b.Cursor()
+
+		counter := 1
+		fmt.Println("You have the following tasks:")
+
+		// Iterate through your database entries and print out pending tasks
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			vals := strings.Split(string(v), separator)
+			if vals[0] == "true"{
+				continue
+			}
+			fmt.Printf("%v. %s\n", counter, k)
+			counter++
+		}
+		return nil
+	})}
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

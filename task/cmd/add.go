@@ -18,30 +18,35 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	bolt "go.etcd.io/bbolt"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Add a new task to your todo list",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Task added sucessfully!")
-		Todos = append(Todos, &Todo{len(Todos), strings.Join(args, " "), false})
-	},
+	Use:   "add [task details]",
+	Short: "Add a new task to your TODO list",
+	RunE: myConn.add,
 }
+
+func (c *Conn)add(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("task details not provided")
+	}
+	defer fmt.Printf("Added task \"%s\" to your todo list\n", strings.Join(args, " "))
+	return c.db.Update(func(tx *bolt.Tx) error {
+        // Retrieve the todos bucket.
+        b := tx.Bucket([]byte("todos"))
+		
+		status := fmt.Sprintf("%s|%s", "false", time.Now().Format(time.RFC1123))
+        // Persist bytes to users bucket.
+        return b.Put([]byte(strings.Join(args, " ")), []byte(status))
+    })
+}
+
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// addCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// addCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
