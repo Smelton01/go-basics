@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -44,9 +45,13 @@ func (c *Conn) remove(cmd *cobra.Command, args []string) error {
 		index := 1
 
 		// Iterate through your database entries and print out pending tasks
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			vals := strings.Split(string(v), separator)
+			if vals[0] == "true" {
+				continue
+			}
 			if strconv.Itoa(index) == args[0]{
-				fmt.Printf("Task \"%s\" removed from TODO list", k)
+				fmt.Printf("Task \"%s\" removed from TODO list\n", k)
 				return c.Delete()
 			}
 			index++

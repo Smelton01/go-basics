@@ -45,12 +45,15 @@ func (c *Conn) do(cmd *cobra.Command, args []string) error{
 
 		index := 1
 		for k, v := c.First(); k != nil; k, v = c.Next() {
+			vals := strings.Split(string(v), separator)
+			if vals[0] == "true" {
+				continue
+			}
 			// Update task to done if index matches
 			if strconv.Itoa(index) == args[0]{
 				fmt.Printf("Task \"%s\" marked as done", k)
-				val := strings.Split(string(v), separator)
-				val[0] = "true"
-				return b.Put(k, []byte(strings.Join(val, separator)))}
+				vals[0] = "true"
+				return b.Put(k, []byte(strings.Join(vals, separator)))}
 			index++
 		}
 		return fmt.Errorf("invalid task index")
