@@ -18,23 +18,21 @@ package cmd
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
 
-// doCmd represents the do command
-var doCmd = &cobra.Command{
-	Use:   "do [task number]",
-	Short: "Mark a task on your TODO list as complete",
-	RunE: myConn.do,
+// rmCmd represents the rm command
+var rmCmd = &cobra.Command{
+	Use:   "rm [task index]",
+	Short: "Permanently remove a task entry from your TODO list",
+	RunE: myConn.remove,
 }
 
-func (c *Conn) do(cmd *cobra.Command, args []string) error{
-	// mark task as done
+func (c *Conn) remove(cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("invalid number arguments")
+		return fmt.Errorf("invalid number of arguments")
 	}
 	if _, e := strconv.ParseInt(args[0], 10, 32); e != nil {
 		return fmt.Errorf("task index must be number")
@@ -44,19 +42,19 @@ func (c *Conn) do(cmd *cobra.Command, args []string) error{
 		c := b.Cursor()
 
 		index := 1
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			// Update task to done if index matches
+
+		// Iterate through your database entries and print out pending tasks
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if strconv.Itoa(index) == args[0]{
-				fmt.Printf("Task \"%s\" marked as done", k)
-				val := strings.Split(string(v), separator)
-				val[0] = "true"
-				return b.Put(k, []byte(strings.Join(val, separator)))}
+				fmt.Printf("Task \"%s\" removed from TODO list", k)
+				return c.Delete()
+			}
 			index++
 		}
-		return fmt.Errorf("invalid task index")
+		return fmt.Errorf("selected task not found")
 	})
 }
 
 func init() {
-	rootCmd.AddCommand(doCmd)
+	rootCmd.AddCommand(rmCmd)
 }

@@ -41,4 +41,4 @@ You have the following tasks:
 - `list` - lists all of our incomplete tasks
 - `do` - marks a task as complete
 
-Tasks will be stored using BoltDB
+Tasks will be stored in local storage using BoltDB
