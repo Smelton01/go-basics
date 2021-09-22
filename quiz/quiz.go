@@ -51,26 +51,23 @@ func main() {
 	}
 
 	c := make(chan int)
+	
 	go questions(quizLines, &quiz, c)
-
+	
 	// Wait for signal to start timer
 	startFlag := <-c
 	_ = startFlag
 
 	// Start timer
-	go timer(&quiz, c)
-	
-	endFlag := <-c
-	_ = endFlag
-	fmt.Println("\nTotal correct:  ", quiz.correct, "/", quiz.total)
+	tim := time.After(time.Duration(quiz.limit)*time.Second)
 
-}
-
-func timer(quiz *quiz, c chan int){
-	time.Sleep(time.Second*time.Duration(quiz.limit))
-	fmt.Println("\nTime's up:")
-	c <- 1
-	close(c)
+	select {
+		case <-tim:
+			fmt.Println("\nTime's up:")
+		case <-c:
+			fmt.Println("Well done...")
+	}
+	fmt.Printf("\nTotal correct: %v/%v", quiz.correct, quiz.total)
 }
 
 func shuffle(questions [][]string) [][]string {
@@ -85,8 +82,8 @@ func questions(lines [][]string, quiz *quiz, c chan int) {
 	// Send signal through channel to start quiz
 	var temp []byte
 	fmt.Println("Press enter to start quiz....")
-	n, _ := fmt.Scanln(&temp)
-	c <- n
+	sig, _ := fmt.Scanln(&temp)
+	c <- sig
 
 	// Iterate through each question and take answers htrough std input
 	for i , line := range lines {
@@ -108,6 +105,5 @@ func questions(lines [][]string, quiz *quiz, c chan int) {
 			quiz.correct += 1
 		} 
 	}
-	c <- 1
-	close(c)
+	c <- sig
 }
