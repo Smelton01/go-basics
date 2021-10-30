@@ -21,8 +21,8 @@ jobs:
     - name: Build
       run: go build -v ./...
     
-    - name: Docker build
-      run: docker build .
+#     - name: Docker build
+#       run: docker build .
 
   test:
     runs-on: ubuntu-latest
